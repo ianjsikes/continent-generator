@@ -52,6 +52,19 @@ class TerrainMap:
                             self.mapArray[location[0]][location[1]].isWater = True
         # print str(river_count) + " rivers created"
 
+    def calculate_rainfall(self):
+        print "Calculating rainfall..."
+        area = 30
+        amount = 0.006
+        for x in range(len(self.mapArray)):
+            for y in range(len(self.mapArray)):
+                if self.mapArray[x][y].isWater:
+                    for a in range(x - (area / 2), x + (area / 2)):
+                        if 0 <= a < self.resolution:
+                            for b in range(y - (area / 2), y + (area / 2)):
+                                if 0 <= b < self.resolution:
+                                    self.mapArray[a][b].rainfall += amount
+
     def fill_map_array(self):
         for x in range(len(self.heightArray)):
             self.mapArray.append(list())
@@ -64,6 +77,14 @@ class TerrainMap:
         for x in range(len(self.mapArray)):
             for y in range(len(self.mapArray)):
                 pixels[x, y] = self.mapArray[x][y].get_greyscale_color()
+        return img
+
+    def get_rainfall_map_image(self):
+        img = Image.new('RGB', (len(self.mapArray), len(self.mapArray)), "black")
+        pixels = img.load()
+        for x in range(len(self.mapArray)):
+            for y in range(len(self.mapArray)):
+                pixels[x, y] = self.mapArray[x][y].get_rainfall_map_color()
         return img
 
     def get_terrain_map_image(self):
