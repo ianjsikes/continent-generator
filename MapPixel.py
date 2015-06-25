@@ -13,10 +13,20 @@ class MapPixel:
         self.height = height
         self.seaLevel = sea_level
         self.rainfall = 0.0
+        self.temperature = 0.0
         self.isWater = True if self.height <= self.seaLevel else False
 
     def get_rainfall_map_color(self):
-        return (int(255*self.rainfall), int(255*self.rainfall), int(255*self.rainfall))
+        if self.isWater:
+            return (0, 0, 0)
+        else:
+            return (int(255*self.rainfall), int(255*self.rainfall), int(255*self.rainfall))
+
+    def get_temperature_map_color(self):
+        if self.isWater:
+            return (0, 0, 0)
+        else:
+            return (int(255*self.temperature), int(255*self.temperature), int(255*self.temperature))
 
     def get_greyscale_color(self):
         return (int(255*self.height), int(255*self.height), int(255*self.height))

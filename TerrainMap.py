@@ -53,9 +53,16 @@ class TerrainMap:
                             self.mapArray[location[0]][location[1]].isWater = True
         # print str(river_count) + " rivers created"
 
+    def calculate_temperature(self):
+        #simple north = cold model (boring)
+        for x in range(len(self.mapArray)):
+            for y in range(len(self.mapArray)):
+                self.mapArray[x][y].temperature = float(y) / float(self.resolution)
+                self.mapArray[x][y].temperature *= 1 - (self.mapArray[x][y].height * 0.9)
+
     def calculate_rainfall(self):
         print "Calculating rainfall..."
-        area = 50
+        area = 40
         amount = 0.04
         for x in range(len(self.mapArray)):
             for y in range(len(self.mapArray)):
@@ -64,11 +71,16 @@ class TerrainMap:
                         if 0 <= a < self.resolution:
                             for b in range(y - (area / 2), y + (area / 2)):
                                 if 0 <= b < self.resolution:
-                                    if self.mapArray[a][b].isWater and self.mapArray[a][b].height > self.seaLevel:
+                                    if self.mapArray[a][b].isWater:
                                         radialAmount = math.pow(math.pow(a - x, 2) + math.pow(b - y, 2), 0.5)
                                         radialAmount = 1.0 / radialAmount
                                         radialAmount *= amount
+                                        if self.mapArray[a][b].height <= self.seaLevel:
+                                            radialAmount *= 0.02
                                         self.mapArray[x][y].rainfall += radialAmount
+        for x in range(len(self.mapArray)):
+            for y in range(len(self.mapArray)):
+                self.mapArray[x][y].rainfall = min(self.mapArray[x][y].rainfall, 1.0)
 
     def fill_map_array(self):
         for x in range(len(self.heightArray)):
@@ -90,6 +102,14 @@ class TerrainMap:
         for x in range(len(self.mapArray)):
             for y in range(len(self.mapArray)):
                 pixels[x, y] = self.mapArray[x][y].get_rainfall_map_color()
+        return img
+
+    def get_temperature_map_image(self):
+        img = Image.new('RGB', (len(self.mapArray), len(self.mapArray)), "black")
+        pixels = img.load()
+        for x in range(len(self.mapArray)):
+            for y in range(len(self.mapArray)):
+                pixels[x, y] = self.mapArray[x][y].get_temperature_map_color()
         return img
 
     def get_terrain_map_image(self):
