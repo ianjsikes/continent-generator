@@ -5,6 +5,7 @@ from MapPixel import MapPixel
 import random
 import math
 from Queue import Queue
+import time
 
 class TerrainMap:
     """A map, duh"""
@@ -41,6 +42,7 @@ class TerrainMap:
 
     def generate_rivers(self, start_height, frequency):
         print "Generating rivers..."
+        start_time = time.time()
         river_count = 0
         for x in range(len(self.mapArray)):
             for y in range(len(self.mapArray)):
@@ -51,17 +53,30 @@ class TerrainMap:
                         path = self.reconstruct_path(came_from, (x, y), goal)
                         for location in path:
                             self.mapArray[location[0]][location[1]].isWater = True
-        # print str(river_count) + " rivers created"
+        print "River generation completed. Elapsed time: " + str(time.time() - start_time)
+        print str(river_count) + " rivers created."
+
+    def calculate_biomes(self):
+        print "Calculating biomes..."
+        start_time = time.time()
+        for x in range(len(self.mapArray)):
+                for y in range(len(self.mapArray)):
+                    self.mapArray[x][y].calculate_biome()
+        print "Biomes calculated. Elapsed time: " + str(time.time() - start_time)
 
     def calculate_temperature(self):
+        print "Calculating temperature..."
+        start_time = time.time()
         #simple north = cold model (boring)
         for x in range(len(self.mapArray)):
             for y in range(len(self.mapArray)):
                 self.mapArray[x][y].temperature = float(y) / float(self.resolution)
                 self.mapArray[x][y].temperature *= 1 - (self.mapArray[x][y].height * 0.9)
+        print "Temperature calculated. Elapsed time: " + str(time.time() - start_time)
 
     def calculate_rainfall(self):
         print "Calculating rainfall..."
+        start_time = time.time()
         area = 40
         amount = 0.04
         for x in range(len(self.mapArray)):
@@ -81,6 +96,7 @@ class TerrainMap:
         for x in range(len(self.mapArray)):
             for y in range(len(self.mapArray)):
                 self.mapArray[x][y].rainfall = min(self.mapArray[x][y].rainfall, 1.0)
+        print "Rainfall calculated. Elapsed time: " + str(time.time() - start_time)
 
     def fill_map_array(self):
         for x in range(len(self.heightArray)):
@@ -94,6 +110,22 @@ class TerrainMap:
         for x in range(len(self.mapArray)):
             for y in range(len(self.mapArray)):
                 pixels[x, y] = self.mapArray[x][y].get_greyscale_color()
+        return img
+
+    def get_water_map_image(self):
+        img = Image.new('RGB', (len(self.mapArray), len(self.mapArray)), "black")
+        pixels = img.load()
+        for x in range(len(self.mapArray)):
+            for y in range(len(self.mapArray)):
+                pixels[x, y] = (0, 0, 0) if self.mapArray[x][y].isWater else (255, 255, 255)
+        return img
+
+    def get_biome_map_image(self):
+        img = Image.new('RGB', (len(self.mapArray), len(self.mapArray)), "black")
+        pixels = img.load()
+        for x in range(len(self.mapArray)):
+            for y in range(len(self.mapArray)):
+                pixels[x, y] = self.mapArray[x][y].get_biome_map_color()
         return img
 
     def get_rainfall_map_image(self):
@@ -126,6 +158,44 @@ class TerrainMap:
         print "Sea level: " + str(self.seaLevel)
         print "Map size: " + str(len(self.mapArray)) + "x" + str(len(self.mapArray[0]))
         print "**************************************"
+
+    def load_height_map(self, path):
+        self.heightArray = list()
+        height_map = Image.open(path)
+        pixels = height_map.load()
+        for x in range(height_map.size[0]):
+            self.heightArray.append(list())
+            for y in range(height_map.size[1]):
+                self.heightArray[x].append(float(pixels[x, y][0]) / 255.0)
+        self.resolution = len(self.heightArray)
+        self.mapArray = list()
+        self.fill_map_array()
+        print "Height map loaded."
+
+    def load_water_map(self, path):
+        water_map = Image.open(path)
+        pixels = water_map.load()
+        for x in range(self.resolution):
+            for y in range(self.resolution):
+                water = True if pixels[x, y][0] < 100 else False
+                self.mapArray[x][y].isWater = water
+        print "Water map loaded."
+
+    def load_rainfall_map(self, path):
+        rainfall_map = Image.open(path)
+        pixels = rainfall_map.load()
+        for x in range(self.resolution):
+            for y in range(self.resolution):
+                self.mapArray[x][y].rainfall = float(pixels[x, y][0]) / 255.0
+        print "Rainfall map loaded."
+
+    def load_temperature_map(self, path):
+        temperature_map = Image.open(path)
+        pixels = temperature_map.load()
+        for x in range(self.resolution):
+            for y in range(self.resolution):
+                self.mapArray[x][y].temperature = float(pixels[x, y][0]) / 255.0
+        print "Temperature map loaded."
 
     def find_river_path(self, start):
         frontier = Queue()
@@ -162,7 +232,6 @@ class TerrainMap:
             if iterations >= self.MAX_ITERATIONS:
                 break
             current = came_from[current]
-            print str(current)
             path.append(current)
         path.reverse()
         return path

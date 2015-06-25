@@ -19,8 +19,9 @@ height = Modifiers.subtract(radial, noise)
 height = Modifiers.subtract(height, detailNoise)
 
 terrainMap = TerrainMap(height, 0.1)
-terrainMap.generate_rivers(0.2, 0.002)
-terrainMap.calculate_rainfall()
+terrainMap.load_height_map("height.png")
+terrainMap.load_water_map("water.png")
+terrainMap.load_rainfall_map("rainfall.png")
 terrainMap.calculate_temperature()
 terrainMap.calculate_biomes()
 
