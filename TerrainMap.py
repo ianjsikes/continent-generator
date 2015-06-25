@@ -3,6 +3,7 @@ __author__ = 'Ian'
 from PIL import Image
 from MapPixel import MapPixel
 import random
+import math
 from Queue import Queue
 
 class TerrainMap:
@@ -54,16 +55,20 @@ class TerrainMap:
 
     def calculate_rainfall(self):
         print "Calculating rainfall..."
-        area = 30
-        amount = 0.006
+        area = 50
+        amount = 0.04
         for x in range(len(self.mapArray)):
             for y in range(len(self.mapArray)):
-                if self.mapArray[x][y].isWater:
+                if not self.mapArray[x][y].isWater:
                     for a in range(x - (area / 2), x + (area / 2)):
                         if 0 <= a < self.resolution:
                             for b in range(y - (area / 2), y + (area / 2)):
                                 if 0 <= b < self.resolution:
-                                    self.mapArray[a][b].rainfall += amount
+                                    if self.mapArray[a][b].isWater and self.mapArray[a][b].height > self.seaLevel:
+                                        radialAmount = math.pow(math.pow(a - x, 2) + math.pow(b - y, 2), 0.5)
+                                        radialAmount = 1.0 / radialAmount
+                                        radialAmount *= amount
+                                        self.mapArray[x][y].rainfall += radialAmount
 
     def fill_map_array(self):
         for x in range(len(self.heightArray)):

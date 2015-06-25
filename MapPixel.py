@@ -6,7 +6,7 @@ class MapPixel:
     """A single unit of map terrain"""
 
     waterColor = (0.55, 1.0, 0.2)
-    landColor = (0.2, 1.0, 0.1)
+    landColor = (0.17, 1.0, 0.1)
 
     def __init__(self, coordinates, height, sea_level):
         self.coordinates = coordinates
@@ -25,6 +25,6 @@ class MapPixel:
         if(self.isWater):
             col = colorsys.hsv_to_rgb(self.waterColor[0], self.waterColor[1], self.waterColor[2] + self.height)
         else:
-            col = colorsys.hsv_to_rgb(self.landColor[0], self.landColor[1], self.landColor[2] + self.height)
+            col = colorsys.hsv_to_rgb(self.landColor[0] + (self.rainfall / 10.0), self.landColor[1], self.landColor[2] + self.height)
         return (int(col[0] * 255), int(col[1] * 255), int(col[2] * 255))
 
