@@ -34,7 +34,6 @@ class TerrainMap:
         results = [(x-1, y+1), (x, y+1), (x+1, y+1), (x-1, y), (x+1, y), (x-1, y-1), (x, y-1), (x+1, y-1)]
         if (x + y) % 2 == 0: results.reverse()
         results = filter(self.in_bounds, results)
-
         return results
 
     def cost(self, a, b):
@@ -118,6 +117,18 @@ class TerrainMap:
                 self.mapArray[x][y].windDirection = clampedVal
 
         print "Wind directions calculated. Elapsed time: " + str(time.time() - start_time)
+
+    def calculate_rainfall_from_wind(self):
+        print "Calculating rainfall..."
+        start_time = time.time()
+
+        for x in range(len(self.mapArray)):
+            for y in range(len(self.mapArray)):
+                if not self.mapArray[x][y].isWater:
+                    val = self.find_distance_to_water((x, y))
+                    self.mapArray[x][y].rainfall = 1.0 / (val / 5.0)
+
+        print "Rainfall calculated. Elapsed time: " + str(time.time() - start_time)
 
     def calculate_biomes(self):
         print "Calculating biomes..."
@@ -268,8 +279,42 @@ class TerrainMap:
                 self.mapArray[x][y].temperature = float(pixels[x, y][0]) / 255.0
         print "Temperature map loaded."
 
+    def find_distance_to_water(self, start):
+        (a, b) = start
+        print str(start)
+        iterations = 0.0
+        while iterations < self.MAX_ITERATIONS and not self.mapArray[a][b].isWater:
+            iterations += 1.0
+            (a, b) = self.get_wind_source((a, b))
+            if not self.in_bounds((a, b)):
+                iterations = 1000.0
+                break
+        # print str(iterations)
+        return iterations
+
+    def get_wind_source(self, id):
+        (x, y) = id
+        direction = self.mapArray[x][y].windDirection
+        sourceDirection = (x, y)
+        if direction == 0 or direction == 360:
+            sourceDirection = (x, y-1)
+        elif direction == 45:
+            sourceDirection = (x+1, y-1)
+        elif direction == 90:
+            sourceDirection = (x+1, y)
+        elif direction == 135:
+            sourceDirection = (x+1, y+1)
+        elif direction == 180:
+            sourceDirection = (x, y+1)
+        elif direction == 225:
+            sourceDirection = (x-1, y+1)
+        elif direction == 270:
+            sourceDirection = (x-1, y)
+        else:
+            sourceDirection = (x-1, y-1)
+        return sourceDirection
+
     def find_river_path(self, start):
-        print "Finding river path..."
         frontier = Queue()
         frontier.put(start, 0)
         came_from = {}
@@ -296,11 +341,9 @@ class TerrainMap:
                     came_from[next] = current
 
             iterations += 1
-        print "Path found."
         return came_from, current
 
     def reconstruct_path(self, came_from, start, goal):
-        print "Reconstructing path..."
         current = goal
         path = [current]
         iterations = 0
@@ -311,5 +354,4 @@ class TerrainMap:
             current = came_from[current]
             path.append(current)
         path.reverse()
-        print "Path reconstructed."
         return path

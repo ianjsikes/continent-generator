@@ -66,7 +66,7 @@ class MapPixel:
 
     def get_rainfall_map_color(self):
         if self.isWater:
-            return (0, 0, 0)
+            return (50, 80, 120)
         else:
             return (int(255*self.rainfall), int(255*self.rainfall), int(255*self.rainfall))
 
