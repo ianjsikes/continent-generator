@@ -15,6 +15,7 @@ class MapPixel:
         self.seaLevel = sea_level
         self.rainfall = 0.0
         self.temperature = 0.0
+        self.windDirection = 0
         self.biome = self.TUNDRA
         self.isWater = True if self.height <= self.seaLevel else False
 
@@ -68,6 +69,14 @@ class MapPixel:
             return (0, 0, 0)
         else:
             return (int(255*self.rainfall), int(255*self.rainfall), int(255*self.rainfall))
+
+    def get_wind_direction_map_color(self):
+        if self.isWater:
+            return (0, 0, 0)
+        else:
+            hue = float(self.windDirection) / 360.0
+            col = colorsys.hsv_to_rgb(hue, 1.0, 0.6)
+            return (int(col[0] * 255), int(col[1] * 255), int(col[2] * 255))
 
     def get_temperature_map_color(self):
         if self.isWater:

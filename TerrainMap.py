@@ -5,12 +5,14 @@ from MapPixel import MapPixel
 import random
 import math
 from Queue import Queue
+import Generators
 import time
 
 class TerrainMap:
     """A map, duh"""
 
     MAX_ITERATIONS = 10000
+    WIND_DIRECTIONS = [0, 180, 90, 270, 90, 0, 180]
 
     def __init__(self, height_array, sea_level):
         self.heightArray = height_array
@@ -55,6 +57,67 @@ class TerrainMap:
                             self.mapArray[location[0]][location[1]].isWater = True
         print "River generation completed. Elapsed time: " + str(time.time() - start_time)
         print str(river_count) + " rivers created."
+
+    def calculate_wind_direction(self, bands=3, distortion=10):
+        print "Calculating wind directions..."
+        start_time = time.time()
+
+        randomOffset = (random.randint(-500, 500), random.randint(-500, 500))
+        distortionMap = Generators.generateNoise(self.resolution, randomOffset, 5, 128.0)
+        distortedValues = list()
+
+        startIndex = random.randint(0, len(self.WIND_DIRECTIONS)-bands)
+        start = self.WIND_DIRECTIONS[startIndex]
+        spacing = self.resolution / (bands - 1)
+        bandList = list()
+        nearestBand = 0
+        val = 0
+        for b in range(bands):
+            bandList.append((b * spacing, self.WIND_DIRECTIONS[startIndex + b]))
+        for x in range(len(self.mapArray)):
+            for z in range(bands):
+                if x >= bandList[z][0]:
+                    nearestBand = z
+            distanceBetweenBands = bandList[nearestBand+1][0] - bandList[nearestBand][0]
+            distanceFromBand = x - bandList[nearestBand][0]
+            percent = float(distanceFromBand) / float(distanceBetweenBands)
+            valueDifference = bandList[nearestBand+1][1] - bandList[nearestBand][1]
+            val = int(valueDifference * percent) + bandList[nearestBand][1]
+            if val < 0:
+                val += 360
+            # print "Between " + str(bandList[nearestBand][1]) + " and " + str(bandList[nearestBand + 1][1])
+            # print str(val)
+
+            for y in range(len(self.mapArray)):
+                self.mapArray[y][x].windDirection = val
+
+        for x in range(len(self.mapArray)):
+            distortedValues.append(list())
+            for y in range(len(self.mapArray)):
+                remappedValue = (distortionMap[x][y] * 2.0) - 1.0
+                distortedOffset = int(remappedValue * distortion)
+                clampedOffset = max(0, min(self.resolution-1, y+distortedOffset))
+                distortedValues[x].append(self.mapArray[x][clampedOffset].windDirection)
+
+        for x in range(len(self.mapArray)):
+            for y in range(len(self.mapArray)):
+                self.mapArray[x][y].windDirection = distortedValues[x][y]
+
+        for x in range(len(self.mapArray)):
+            for y in range(len(self.mapArray)):
+                val = self.mapArray[x][y].windDirection
+                clampedVal = val
+                if (val % 45) < 5:
+                    clampedVal = val - (val % 45)
+                elif (val % 45) > 40:
+                    clampedVal = val + (45 - (val % 45))
+                elif random.randint(0, 45) > (val % 45):
+                    clampedVal = val - (val % 45)
+                else:
+                    clampedVal = val + (45 - (val % 45))
+                self.mapArray[x][y].windDirection = clampedVal
+
+        print "Wind directions calculated. Elapsed time: " + str(time.time() - start_time)
 
     def calculate_biomes(self):
         print "Calculating biomes..."
@@ -110,6 +173,14 @@ class TerrainMap:
         for x in range(len(self.mapArray)):
             for y in range(len(self.mapArray)):
                 pixels[x, y] = self.mapArray[x][y].get_greyscale_color()
+        return img
+
+    def get_wind_direction_map_image(self):
+        img = Image.new('RGB', (len(self.mapArray), len(self.mapArray)), "black")
+        pixels = img.load()
+        for x in range(len(self.mapArray)):
+            for y in range(len(self.mapArray)):
+                pixels[x, y] = self.mapArray[x][y].get_wind_direction_map_color()
         return img
 
     def get_water_map_image(self):
@@ -198,6 +269,7 @@ class TerrainMap:
         print "Temperature map loaded."
 
     def find_river_path(self, start):
+        print "Finding river path..."
         frontier = Queue()
         frontier.put(start, 0)
         came_from = {}
@@ -205,7 +277,9 @@ class TerrainMap:
         came_from[start] = None
         cost_so_far[start] = 0
 
-        while not frontier.empty():
+        iterations = 0
+
+        while iterations < self.MAX_ITERATIONS and not frontier.empty():
             current = frontier.get()
             self.mapArray[current[0]][current[1]].isWater = True
 
@@ -221,9 +295,12 @@ class TerrainMap:
                     frontier.put(next, priority)
                     came_from[next] = current
 
+            iterations += 1
+        print "Path found."
         return came_from, current
 
     def reconstruct_path(self, came_from, start, goal):
+        print "Reconstructing path..."
         current = goal
         path = [current]
         iterations = 0
@@ -234,4 +311,5 @@ class TerrainMap:
             current = came_from[current]
             path.append(current)
         path.reverse()
+        print "Path reconstructed."
         return path
